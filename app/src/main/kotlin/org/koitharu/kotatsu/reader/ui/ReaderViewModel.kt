@@ -437,9 +437,7 @@ class ReaderViewModel @Inject constructor(
 							try {
 								chaptersLoader.loadSingleChapter(newState.chapterId)
 							} catch (e: Exception) {
-								// Don't reset readingState.value to null as it would cause loss of current reading position
-								// during configuration changes. Instead, keep the current state and let the error handling
-								// deal with the issue without losing the user's reading progress.
+								readingState.value = null // try next time
 								exception = e.mergeWith(exception)
 								return@collect
 							}
