@@ -15,6 +15,7 @@ fun MangaDetails.mapChapters(
 	newCount: Int,
 	branch: String?,
 	bookmarks: List<Bookmark>,
+	readChapterIds: Set<Long>,
 	isGrid: Boolean,
 	isDownloadedOnly: Boolean,
 ): List<ChapterListItem> {
@@ -25,27 +26,20 @@ fun MangaDetails.mapChapters(
 	}
 	val bookmarked = bookmarks.mapToSet { it.chapterId }
 	val newFrom = if (newCount == 0 || remoteChapters.isEmpty()) Int.MAX_VALUE else remoteChapters.size - newCount
-	val ids = buildSet(maxOf(remoteChapters.size, localChapters.size)) {
-		remoteChapters.mapTo(this) { it.id }
-		localChapters.mapTo(this) { it.id }
-	}
-	val result = ArrayList<ChapterListItem>(ids.size)
+	val result = ArrayList<ChapterListItem>(maxOf(remoteChapters.size, localChapters.size))
 	val localMap = if (localChapters.isNotEmpty()) {
 		localChapters.associateByTo(LinkedHashMap(localChapters.size)) { it.id }
 	} else {
 		null
 	}
-	var isUnread = currentChapterId !in ids
 	if (!isDownloadedOnly || local?.manga?.chapters == null) {
-		for (chapter in remoteChapters) {
+		for ((index, chapter) in remoteChapters.withIndex()) {
 			val local = localMap?.remove(chapter.id)
-			if (chapter.id == currentChapterId) {
-				isUnread = true
-			}
+			val isUnread = chapter.id !in readChapterIds
 			result += (local ?: chapter).toListItem(
 				isCurrent = chapter.id == currentChapterId,
 				isUnread = isUnread,
-				isNew = isUnread && result.size >= newFrom,
+				isNew = isUnread && index >= newFrom,
 				isDownloaded = local != null,
 				isBookmarked = chapter.id in bookmarked,
 				isGrid = isGrid,
@@ -54,9 +48,7 @@ fun MangaDetails.mapChapters(
 	}
 	if (!localMap.isNullOrEmpty()) {
 		for (chapter in localMap.values) {
-			if (chapter.id == currentChapterId) {
-				isUnread = true
-			}
+			val isUnread = chapter.id !in readChapterIds
 			result += chapter.toListItem(
 				isCurrent = chapter.id == currentChapterId,
 				isUnread = isUnread,

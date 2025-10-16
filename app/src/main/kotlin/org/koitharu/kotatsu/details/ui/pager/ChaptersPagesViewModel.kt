@@ -54,6 +54,7 @@ abstract class ChaptersPagesViewModel(
 	@JvmField protected val interactor: DetailsInteractor,
 	private val bookmarksRepository: BookmarksRepository,
 	private val historyRepository: HistoryRepository,
+	private val chapterReadRepository: org.koitharu.kotatsu.history.data.ChapterReadRepository,
 	private val downloadScheduler: DownloadWorker.Scheduler,
 	private val deleteLocalMangaUseCase: DeleteLocalMangaUseCase,
 	private val localStorageChanges: SharedFlow<LocalManga?>,
@@ -121,6 +122,14 @@ abstract class ChaptersPagesViewModel(
 		}
 	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Lazily, emptyList())
 
+	private val readChapterIds = mangaDetails.flatMapLatest {
+		if (it != null) {
+			chapterReadRepository.observeReadChapterIds(it.id).withErrorHandling()
+		} else {
+			flowOf(emptySet())
+		}
+	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Lazily, emptySet())
+
 	val chapters = combine(
 		combine(
 			mangaDetails,
@@ -128,14 +137,16 @@ abstract class ChaptersPagesViewModel(
 			selectedBranch,
 			newChaptersCount,
 			bookmarks,
+			readChapterIds,
 			isChaptersInGridView,
 			isDownloadedOnly,
-		) { manga, currentChapterId, branch, news, bookmarks, grid, downloadedOnly ->
+		) { manga, currentChapterId, branch, news, bookmarks, readIds, grid, downloadedOnly ->
 			manga?.mapChapters(
 				currentChapterId = currentChapterId,
 				newCount = news,
 				branch = branch,
 				bookmarks = bookmarks,
+				readChapterIds = readIds,
 				isGrid = grid,
 				isDownloadedOnly = downloadedOnly,
 			).orEmpty()
