@@ -60,6 +60,7 @@ import javax.inject.Inject
 class DetailsViewModel @Inject constructor(
 	private val historyRepository: HistoryRepository,
 	bookmarksRepository: BookmarksRepository,
+	chapterReadRepository: org.koitharu.kotatsu.history.data.ChapterReadRepository,
 	settings: AppSettings,
 	private val scrobblers: Set<@JvmSuppressWildcards Scrobbler>,
 	@LocalStorageChanges localStorageChanges: SharedFlow<LocalManga?>,
@@ -78,6 +79,7 @@ class DetailsViewModel @Inject constructor(
 	interactor = interactor,
 	bookmarksRepository = bookmarksRepository,
 	historyRepository = historyRepository,
+	chapterReadRepository = chapterReadRepository,
 	downloadScheduler = downloadScheduler,
 	deleteLocalMangaUseCase = deleteLocalMangaUseCase,
 	localStorageChanges = localStorageChanges,

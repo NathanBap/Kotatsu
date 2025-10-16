@@ -44,6 +44,7 @@ class HistoryRepository @Inject constructor(
 	private val mangaRepository: MangaDataRepository,
 	private val localObserver: HistoryLocalObserver,
 	private val newChaptersUseCaseProvider: Provider<CheckNewChaptersUseCase>,
+	private val chapterReadRepository: ChapterReadRepository,
 ) {
 
 	suspend fun getList(offset: Int, limit: Int): List<Manga> {
@@ -118,6 +119,15 @@ class HistoryRepository @Inject constructor(
 		db.withTransaction {
 			mangaRepository.storeManga(manga, replaceExisting = true)
 			val branch = manga.chapters?.findById(chapterId)?.branch
+			val branchChapters = manga.chapters?.filter { it.branch == branch }.orEmpty()
+			val chapterIndex = branchChapters.indexOfFirst { it.id == chapterId }
+			
+			// Mark all chapters before current as read
+			if (chapterIndex > 0) {
+				val chaptersToMarkRead = branchChapters.take(chapterIndex).map { it.id }
+				chapterReadRepository.markChaptersAsRead(manga.id, chaptersToMarkRead)
+			}
+			
 			db.getHistoryDao().upsert(
 				HistoryEntity(
 					mangaId = manga.id,
@@ -127,7 +137,7 @@ class HistoryRepository @Inject constructor(
 					page = page,
 					scroll = scroll.toFloat(), // we migrate to int, but decide to not update database
 					percent = percent,
-					chaptersCount = manga.chapters?.count { it.branch == branch } ?: 0,
+					chaptersCount = branchChapters.size,
 					deletedAt = 0L,
 				),
 			)
