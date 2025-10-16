@@ -122,10 +122,17 @@ class HistoryRepository @Inject constructor(
 			val branchChapters = manga.chapters?.filter { it.branch == branch }.orEmpty()
 			val chapterIndex = branchChapters.indexOfFirst { it.id == chapterId }
 			
-			// Mark all chapters before current as read
-			if (chapterIndex > 0) {
-				val chaptersToMarkRead = branchChapters.take(chapterIndex).map { it.id }
-				chapterReadRepository.markChaptersAsRead(manga.id, chaptersToMarkRead)
+			// Mark chapters as read based on reading progress
+			if (chapterIndex >= 0) {
+				// Always mark all chapters before current as read
+				if (chapterIndex > 0) {
+					val previousChapters = branchChapters.take(chapterIndex).map { it.id }
+					chapterReadRepository.markChaptersAsRead(manga.id, previousChapters)
+				}
+				// Mark current chapter as read if user has read most of it (>80%)
+				if (percent >= 0.8f) {
+					chapterReadRepository.markChapterAsRead(manga.id, chapterId)
+				}
 			}
 			
 			db.getHistoryDao().upsert(
